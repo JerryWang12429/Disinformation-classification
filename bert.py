@@ -17,33 +17,29 @@ NUM_LABELS = 2
 
 
 class FakeNewsDataset(Dataset):
-    # 讀取前處理後的 tsv 檔並初始化一些參數
     def __init__(self, mode, tokenizer):
-        assert mode in ["train", "test"]  # 一般訓練你會需要 dev set
+        assert mode in ["train", "test"]
         self.mode = mode
 
         self.df = pd.read_csv("data/" + mode + ".tsv", sep="\t").fillna("")
         self.len = len(self.df)
-        self.tokenizer = tokenizer  # 我們將使用 BERT tokenizer
+        self.tokenizer = tokenizer
 
-    # 定義回傳一筆訓練 / 測試數據的函式
     def __getitem__(self, idx):
         if self.mode == "test":
             text_a = self.df.text[idx]
             label_tensor = None
         else:
             text_a = self.df.text[idx]
-            # 將 label 文字也轉換成索引方便轉換成 tensor
+
             label_id = self.df.label[idx]
             label_tensor = torch.tensor(label_id)
 
-        # 建立第一個句子的 BERT tokens 並加入分隔符號 [SEP]
         word_pieces = ["[CLS]"]
         tokens_a = self.tokenizer.tokenize(text_a)
         word_pieces += tokens_a + ["[SEP]"]
         len_a = len(word_pieces)
 
-        # 將整個 token 序列轉換成索引序列
         ids = self.tokenizer.convert_tokens_to_ids(word_pieces)
         tokens_tensor = torch.tensor(ids)
 
@@ -59,18 +55,16 @@ def create_mini_batch(samples):
     tokens_tensors = [s[0] for s in samples]
     segments_tensors = [s[1] for s in samples]
 
-    # 測試集有 labels
     if samples[0][2] is not None:
         label_ids = torch.stack([s[2] for s in samples])
     else:
         label_ids = None
 
-    # zero pad 到同一序列長度
+    # zero pad
     tokens_tensors = pad_sequence(tokens_tensors, batch_first=True)
     segments_tensors = pad_sequence(segments_tensors, batch_first=True)
 
-    # attention masks，將 tokens_tensors 裡頭不為 zero padding
-    # 的位置設為 1 讓 BERT 只關注這些位置的 tokens
+    # attention masks，關注非zero padding位置
     masks_tensors = torch.zeros(tokens_tensors.shape, dtype=torch.long)
     masks_tensors = masks_tensors.masked_fill(tokens_tensors != 0, 1)
 
@@ -82,27 +76,24 @@ def get_predictions(model, dataloader, compute_acc=False):
     correct = 0
     total = 0
 
-    model.eval()  # 推論模式
+    model.eval()
     with torch.no_grad():
-        # 遍巡整個資料集
+
         for data in dataloader:
-            # 將所有 tensors 移到 GPU 上
+            # 將tensors 移到 GPU 上
             if next(model.parameters()).is_cuda:
                 data = [t.to("cuda:0") for t in data if t is not None]
 
             outputs = model(*data[:3])
 
-            # 別忘記前 3 個 tensors 分別為 tokens, segments 以及 masks
             logits = outputs[0]
             _, pred = torch.max(logits.data, 1)
 
-            # 用來計算訓練集的分類準確率
             if compute_acc:
                 labels = data[3]
                 total += labels.size(0)
                 correct += (pred == labels).sum().item()
 
-            # 將當前 batch 記錄下來
             if predictions is None:
                 predictions = pred
             else:
@@ -149,7 +140,7 @@ def restructure():
 
 
 if __name__ == "__main__":
-    restructure()
+    # restructure()
 
     trainset = FakeNewsDataset("train", tokenizer=tokenizer)
 
@@ -178,7 +169,8 @@ label_ids.shape        = {label_ids.shape}
     model = BertForSequenceClassification.from_pretrained(
         PRETRAINED_MODEL_NAME, num_labels=NUM_LABELS)
 
-    print("""name            module----------------------""")
+    print("""name            module
+    ----------------------""")
     for name, module in model.named_children():
         if name == "bert":
             for n, _ in module.named_children():
@@ -193,9 +185,9 @@ label_ids.shape        = {label_ids.shape}
     print("classification acc:", acc)
 
     model.train()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1.0e-2)
+    optimizer = torch.optim.Adam(model.parameters(), lr=2e-5)
 
-    EPOCHS = 20
+    EPOCHS = 15
 
     for epoch in range(EPOCHS):
 
@@ -225,3 +217,21 @@ label_ids.shape        = {label_ids.shape}
         _, acc = get_predictions(model, trainloader, compute_acc=True)
         print('[epoch %d] loss: %.3f, acc: %.3f' %
               (epoch + 1, running_loss, acc))
+    """ testset = FakeNewsDataset("test", tokenizer=tokenizer)
+    testloader = DataLoader(testset,
+                            batch_size=256,
+                            collate_fn=create_mini_batch)
+
+ 
+    predictions = get_predictions(model, testloader)
+
+   
+    index_map = {v: k for k, v in testset.label_map.items()}
+
+ 
+    df = pd.DataFrame({"Category": predictions.tolist()})
+    df['Category'] = df.Category.apply(lambda x: index_map[x])
+    df_pred = pd.concat([testset.df.loc[:, ["Id"]], df.loc[:, 'Category']],
+                        axis=1)
+    df_pred.to_csv('bert_1_prec_training_samples.csv', index=False)
+    df_pred.head() """
