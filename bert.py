@@ -154,18 +154,18 @@ if __name__ == "__main__":
         masks_tensors, label_ids = data
 
     print(f"""
-tokens_tensors.shape   = {tokens_tensors.shape} 
-{tokens_tensors}
-------------------------
-segments_tensors.shape = {segments_tensors.shape}
-{segments_tensors}
-------------------------
-masks_tensors.shape    = {masks_tensors.shape}
-{masks_tensors}
-------------------------
-label_ids.shape        = {label_ids.shape}
-{label_ids}
-""")
+    tokens_tensors.shape   = {tokens_tensors.shape}
+    {tokens_tensors}
+    ------------------------
+    segments_tensors.shape = {segments_tensors.shape}
+    {segments_tensors}
+    ------------------------
+    masks_tensors.shape    = {masks_tensors.shape}
+    {masks_tensors}
+    ------------------------
+    label_ids.shape        = {label_ids.shape}
+    {label_ids}
+    """)
     model = BertForSequenceClassification.from_pretrained(
         PRETRAINED_MODEL_NAME, num_labels=NUM_LABELS)
 
@@ -187,7 +187,7 @@ label_ids.shape        = {label_ids.shape}
     model.train()
     optimizer = torch.optim.Adam(model.parameters(), lr=2e-5)
 
-    EPOCHS = 15
+    EPOCHS = 20
 
     for epoch in range(EPOCHS):
 
@@ -214,24 +214,11 @@ label_ids.shape        = {label_ids.shape}
             # 紀錄當前 batch loss
             running_loss += loss.item()
         # 計算分類準確率
+        Quantity = pd.read_csv('data/train.tsv', sep='\t', index=False)
+        count = Quantity.shape[0]
+        ave = count/BATCH_SIZE
         _, acc = get_predictions(model, trainloader, compute_acc=True)
         print('[epoch %d] loss: %.3f, acc: %.3f' %
               (epoch + 1, running_loss, acc))
-    """ testset = FakeNewsDataset("test", tokenizer=tokenizer)
-    testloader = DataLoader(testset,
-                            batch_size=256,
-                            collate_fn=create_mini_batch)
 
- 
-    predictions = get_predictions(model, testloader)
-
-   
-    index_map = {v: k for k, v in testset.label_map.items()}
-
- 
-    df = pd.DataFrame({"Category": predictions.tolist()})
-    df['Category'] = df.Category.apply(lambda x: index_map[x])
-    df_pred = pd.concat([testset.df.loc[:, ["Id"]], df.loc[:, 'Category']],
-                        axis=1)
-    df_pred.to_csv('bert_1_prec_training_samples.csv', index=False)
-    df_pred.head() """
+    model.save_pretrained('model/')
