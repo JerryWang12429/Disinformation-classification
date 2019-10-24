@@ -99,8 +99,6 @@ def get_predictions(model, dataloader, compute_acc=False):
             else:
                 predictions = torch.cat((predictions, pred))
 
-            break
-
     if compute_acc:
         acc = correct / total
         return predictions, acc
@@ -189,6 +187,10 @@ if __name__ == "__main__":
 
     EPOCHS = 20
 
+    Quantity = pd.read_csv('data/train.tsv', sep='\t')
+    count = Quantity.shape[0]
+    ave = count/BATCH_SIZE
+
     for epoch in range(EPOCHS):
 
         running_loss = 0.0
@@ -214,11 +216,9 @@ if __name__ == "__main__":
             # 紀錄當前 batch loss
             running_loss += loss.item()
         # 計算分類準確率
-        Quantity = pd.read_csv('data/train.tsv', sep='\t', index=False)
-        count = Quantity.shape[0]
-        ave = count/BATCH_SIZE
+
         _, acc = get_predictions(model, trainloader, compute_acc=True)
         print('[epoch %d] loss: %.3f, acc: %.3f' %
-              (epoch + 1, running_loss, acc))
+              (epoch + 1, running_loss/ave, acc))
 
     model.save_pretrained('model/')
