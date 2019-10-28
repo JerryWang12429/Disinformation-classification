@@ -2,7 +2,6 @@ import pdb
 import pandas as pd
 import numpy as np
 
-
 import torch
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
@@ -154,19 +153,18 @@ if __name__ == "__main__":
     predictions = get_predictions(model, testloader)
 
     df = pd.DataFrame({"Category": predictions.tolist()})
-    print(type(df))
-    print(df.shape[0])
-    # print(df)
+
+    df_pred = pd.concat([testset.df.loc[:, ["id"]], df.loc[:, 'Category']],
+                        axis=1)
 
     result = pd.read_csv('data/test.tsv', sep='\t')
-    origin = result['label'].to_frame()
-    print(type(origin))
-    print(origin.shape[0])
-    # print(origin)
+    origin = result[['id', 'label']]
+
+    compare = pd.merge(df_pred, origin, how='inner')
 
     good = 0
-    for i in range(origin.shape[0]):
-        if df.iloc[i]['Category'] == origin.iloc[i]['label']:
+    for i in range(compare.shape[0]):
+        if compare.iloc[i]['Category'] == compare.iloc[i]['label']:
             good += 1
 
     acc = good/df.shape[0]

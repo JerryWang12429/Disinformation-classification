@@ -130,15 +130,15 @@ def restructure():
     print(train.shape)
     print(test.shape)
 
-    train.text = train.text.str.slice(0, 50)
-    test.text = test.text.str.slice(0, 50)
+    train.text = train.text.str.slice(0, 75)
+    test.text = test.text.str.slice(0, 75)
 
     train.to_csv('data/train.tsv', sep='\t', index=False)
     test.to_csv('data/test.tsv', sep='\t', index=False)
 
 
 if __name__ == "__main__":
-    # restructure()
+    restructure()
 
     trainset = FakeNewsDataset("train", tokenizer=tokenizer)
 
@@ -222,3 +222,4 @@ if __name__ == "__main__":
               (epoch + 1, running_loss/ave, acc))
 
     model.save_pretrained('model/')
+    tokenizer.save_pretrained('model/')
